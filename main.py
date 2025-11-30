@@ -13,7 +13,7 @@ from database import (
 )
 
 # --- НАСТРОЙКИ (ЗАПОЛНИ ЭТО!) ---
-TOKEN = "ВСТАВЬ_СЮДА_ТОКЕН_БОТА"
+TOKEN = "8405257491:AAGgnOU2fQ211KyfibeBVCRmL3GM8AXHrHw"
 MY_ID = 12345678  # Твой ID цифрами
 SITE_URL = "https://ТВОЙ-САЙТ.com/mini_app/index.html" # Ссылка на мини-апп
 
