@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создать Розыгрыш</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+       body {
+    /* Автоматически подстраивается под светлую/темную тему Telegram */
+    background-color: var(--tg-theme-bg-color); 
+    color: var(--tg-theme-text-color);
+    font-family: sans-serif;
+    padding: 20px;
+    margin: 0;
+}
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: none;
+    background-color: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+.hint {
+    color: var(--tg-theme-hint-color);
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+    </style>
+</head>
+<body>
+
+    <h2>🎉 Новый розыгрыш</h2>
+
+    <label>Что разыгрываем?</label>
+    <input type="text" id="prize" placeholder="Например: iPhone 15">
+
+    <label>Сколько победителей?</label>
+    <input type="number" id="winners" value="1" min="1">
+
+    <label>ID Канала (обязательно с @)</label>
+    <div class="hint">Бот должен быть админом в этом канале</div>
+    <input type="text" id="channel" placeholder="@my_channel">
+
+    <script>
+        // Инициализируем приложение Telegram
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Раскрыть на весь экран
+
+        // Настраиваем Главную Кнопку (внизу экрана)
+        tg.MainButton.text = "Создать розыгрыш";
+        tg.MainButton.show();
+
+        // Что происходит при нажатии на Главную Кнопку
+        tg.MainButton.onClick(function() {
+            // Собираем данные из полей
+            let prize = document.getElementById("prize").value;
+            let winners = document.getElementById("winners").value;
+            let channel = document.getElementById("channel").value;
+
+            // Простая проверка
+            if (prize === "" || channel === "") {
+                tg.showAlert("Заполните все поля!");
+                return;
+            }
+
+            // Формируем данные для отправки боту
+            let data = {
+                prize: prize,
+                winners: winners,
+                channel: channel,
+                action: "create_contest" // Метка, чтобы бот понял, что делать
+            };
+
+            // Отправляем данные боту (как сообщение, но скрыто)
+            tg.sendData(JSON.stringify(data));
+        });
+    </script>
+</body>
+</html>
