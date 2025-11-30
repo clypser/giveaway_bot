@@ -16,10 +16,7 @@ def create_tables():
     )
     ''')
 
-    # Таблица конкурсов (Обновленная структура)
-    # channels - храним как JSON-строку (список каналов)
-    # end_time - дата окончания
-    # description - условия/описание
+    # Таблица конкурсов (Базовая структура)
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS contests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,6 +42,22 @@ def create_tables():
     )
     ''')
     
+    # --- АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ БАЗЫ (Миграция) ---
+    # Если база была создана старым кодом, в ней нет колонки 'channels'.
+    # Мы проверяем это и добавляем колонки, если нужно.
+    try:
+        cursor.execute("SELECT channels FROM contests LIMIT 1")
+    except sqlite3.OperationalError:
+        print("⚠️ Обнаружена старая структура базы. Обновляем...")
+        try:
+            cursor.execute("ALTER TABLE contests ADD COLUMN channels TEXT")
+            cursor.execute("ALTER TABLE contests ADD COLUMN end_time TEXT")
+            cursor.execute("ALTER TABLE contests ADD COLUMN description TEXT")
+            cursor.execute("ALTER TABLE contests ADD COLUMN secret_winner_id INTEGER DEFAULT NULL")
+            print("✅ База данных успешно обновлена!")
+        except Exception as e:
+            print(f"❌ Ошибка обновления базы: {e}")
+
     connection.commit()
     connection.close()
 
@@ -67,18 +80,25 @@ def create_contest(creator_id, prize, winners_count, channels_list, end_time, de
     connection = sqlite3.connect(DB_NAME)
     cursor = connection.cursor()
     
-    # Превращаем список каналов ["@a", "@b"] в строку '["@a", "@b"]' для сохранения в БД
-    channels_json = json.dumps(channels_list)
-    
-    cursor.execute("""
-        INSERT INTO contests (creator_id, prize, winners_count, channels, end_time, description) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (creator_id, prize, winners_count, channels_json, end_time, description))
-    
-    contest_id = cursor.lastrowid
-    connection.commit()
-    connection.close()
-    return contest_id
+    try:
+        # Превращаем список каналов ["@a", "@b"] в строку '["@a", "@b"]' для сохранения в БД
+        channels_json = json.dumps(channels_list)
+        
+        cursor.execute("""
+            INSERT INTO contests (creator_id, prize, winners_count, channels, end_time, description) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (creator_id, prize, winners_count, channels_json, end_time, description))
+        
+        contest_id = cursor.lastrowid
+        connection.commit()
+        print(f"✅ Конкурс #{contest_id} успешно сохранен в БД.")
+        return contest_id
+        
+    except Exception as e:
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА записи конкурса в БД: {e}")
+        raise e # Пробрасываем ошибку дальше, чтобы бот знал о ней
+    finally:
+        connection.close()
 
 def get_contest(contest_id):
     connection = sqlite3.connect(DB_NAME)
