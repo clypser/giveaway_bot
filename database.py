@@ -1,48 +1,112 @@
 import sqlite3
+import json
 
-# Название файла базы данных
 DB_NAME = 'bot_database.db'
 
-# 1. Функция создания таблиц (запускается один раз при старте)
 def create_tables():
-    # Подключаемся к файлу (или создаем его)
     connection = sqlite3.connect(DB_NAME)
     cursor = connection.cursor()
 
-    # Создаем таблицу users, если её нет
-    # У нас будут поля: id (номер в базе), telegram_id (ID в телеграме), username (имя пользователя)
+    # Таблица пользователей
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         telegram_id INTEGER UNIQUE,
-        username TEXT,
-        referrer_id INTEGER, 
-        balance INTEGER DEFAULT 0
+        username TEXT
+    )
+    ''')
+
+    # Таблица конкурсов (Обновленная структура)
+    # channels - храним как JSON-строку (список каналов)
+    # end_time - дата окончания
+    # description - условия/описание
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS contests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        creator_id INTEGER,
+        prize TEXT,
+        winners_count INTEGER,
+        channels TEXT, 
+        end_time TEXT,
+        description TEXT,
+        secret_winner_id INTEGER DEFAULT NULL,
+        is_active BOOLEAN DEFAULT 1
+    )
+    ''')
+
+    # Таблица участников
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS participants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contest_id INTEGER,
+        user_id INTEGER,
+        user_name TEXT,
+        UNIQUE(contest_id, user_id)
     )
     ''')
     
     connection.commit()
     connection.close()
 
-# 2. Функция добавления пользователя
-def add_user(telegram_id, username, referrer_id=None):
+# --- ФУНКЦИИ ---
+
+def add_user(telegram_id, username):
     connection = sqlite3.connect(DB_NAME)
     cursor = connection.cursor()
-    
     try:
-        # Пытаемся добавить пользователя
-        cursor.execute("INSERT INTO users (telegram_id, username, referrer_id) VALUES (?, ?, ?)", 
-                       (telegram_id, username, referrer_id))
+        cursor.execute("INSERT INTO users (telegram_id, username) VALUES (?, ?)", (telegram_id, username))
         connection.commit()
-        print(f"Пользователь {username} добавлен в базу!")
-        return True # Успешно добавили
+        return True
     except sqlite3.IntegrityError:
-        # Если такой ID уже есть, ничего не делаем
-        return False # Уже был в базе
+        return False
     finally:
         connection.close()
 
-# --- ДОБАВИТЬ В КОНЕЦ database.py ---
+# Создание конкурса с новыми полями
+def create_contest(creator_id, prize, winners_count, channels_list, end_time, description):
+    connection = sqlite3.connect(DB_NAME)
+    cursor = connection.cursor()
+    
+    # Превращаем список каналов ["@a", "@b"] в строку '["@a", "@b"]' для сохранения в БД
+    channels_json = json.dumps(channels_list)
+    
+    cursor.execute("""
+        INSERT INTO contests (creator_id, prize, winners_count, channels, end_time, description) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (creator_id, prize, winners_count, channels_json, end_time, description))
+    
+    contest_id = cursor.lastrowid
+    connection.commit()
+    connection.close()
+    return contest_id
+
+def get_contest(contest_id):
+    connection = sqlite3.connect(DB_NAME)
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM contests WHERE id = ?", (contest_id,))
+    data = cursor.fetchone()
+    connection.close()
+    return data
+
+def add_participant(contest_id, user_id, user_name):
+    connection = sqlite3.connect(DB_NAME)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("INSERT INTO participants (contest_id, user_id, user_name) VALUES (?, ?, ?)", 
+                       (contest_id, user_id, user_name))
+        connection.commit()
+        connection.close()
+        return True
+    except sqlite3.IntegrityError:
+        connection.close()
+        return False
+
+def set_secret_winner(contest_id, winner_id):
+    connection = sqlite3.connect(DB_NAME)
+    cursor = connection.cursor()
+    cursor.execute("UPDATE contests SET secret_winner_id = ? WHERE id = ?", (winner_id, contest_id))
+    connection.commit()
+    connection.close()
 
 def mark_contest_inactive(contest_id):
     connection = sqlite3.connect(DB_NAME)

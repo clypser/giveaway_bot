@@ -2,87 +2,584 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Создать Розыгрыш</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Giveaway Bot App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-       body {
-    /* Автоматически подстраивается под светлую/темную тему Telegram */
-    background-color: var(--tg-theme-bg-color); 
-    color: var(--tg-theme-text-color);
-    font-family: sans-serif;
-    padding: 20px;
-    margin: 0;
-}
-input, button {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: none;
-    background-color: var(--tg-theme-secondary-bg-color);
-    color: var(--tg-theme-text-color);
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-label {
-    font-weight: bold;
-    display: block;
-    margin-bottom: 5px;
-}
-.hint {
-    color: var(--tg-theme-hint-color);
-    font-size: 12px;
-    margin-bottom: 10px;
-}
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #fff);
+            --text-color: var(--tg-theme-text-color, #000);
+            --hint-color: var(--tg-theme-hint-color, #999);
+            --link-color: var(--tg-theme-button-color, #2481cc);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            --card-bg: var(--tg-theme-bg-color, #ffffff);
+            --danger-color: #ff3b30;
+        }
+
+        body {
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            padding-bottom: 90px;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- НАВИГАЦИЯ --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--hint-color);
+            font-size: 10px;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item i {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-item.active {
+            color: var(--link-color);
+            transform: translateY(-2px);
+        }
+
+        /* --- СТРАНИЦЫ --- */
+        .page {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            margin-top: 10px;
+            margin-bottom: 20px;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        /* --- КАРТОЧКИ --- */
+        .contest-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.1s;
+        }
+        
+        .contest-card:active {
+            transform: scale(0.98);
+        }
+
+        .contest-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .contest-info p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--hint-color);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-badge {
+            font-size: 11px;
+            padding: 6px 10px;
+            border-radius: 100px;
+            background-color: rgba(36, 129, 204, 0.1);
+            color: var(--link-color);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .status-badge.closed {
+            background-color: rgba(0,0,0,0.05);
+            color: var(--hint-color);
+        }
+
+        /* --- ФОРМА --- */
+        .form-section {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 8px 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .form-group:last-child {
+            border-bottom: none;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--link-color);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input, 
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            border: 1px solid transparent;
+            background: transparent;
+            font-size: 17px;
+            color: var(--text-color);
+            padding: 4px 0;
+            outline: none;
+            transition: border-color 0.3s;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        /* Стилизация календаря */
+        input[type="datetime-local"] {
+            color: var(--text-color);
+        }
+        
+        .form-group input.error,
+        .form-group textarea.error {
+            border-bottom: 1px solid var(--danger-color);
+        }
+
+        /* Стили для списка каналов */
+        .channel-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .channel-row input {
+            flex: 1;
+        }
+        .remove-btn {
+            color: var(--danger-color);
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .add-channel-btn {
+            color: var(--link-color);
+            background: none;
+            border: none;
+            padding: 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .note {
+            font-size: 13px;
+            color: var(--hint-color);
+            padding: 0 16px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        /* --- ПРОФИЛЬ --- */
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        }
+
+        .avatar-circle {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #2481cc, #4ea4e8);
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-color);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--hint-color);
+            font-weight: 500;
+        }
+
+        /* Загрузчик */
+        .loader {
+            text-align: center;
+            padding: 40px;
+            color: var(--hint-color);
+            display: none;
+        }
+        .loader i {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Пустое состояние */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--hint-color);
+            display: none;
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
 
-    <h2>🎉 Новый розыгрыш</h2>
+    <!-- СТРАНИЦА 1: ГЛАВНАЯ (СПИСОК) -->
+    <div id="page-home" class="page active">
+        <h2>Мои розыгрыши</h2>
+        
+        <div id="loader" class="loader">
+            <i class="fas fa-spinner fa-2x"></i>
+            <p style="font-size: 14px; margin-top: 10px;">Загрузка данных...</p>
+        </div>
 
-    <label>Что разыгрываем?</label>
-    <input type="text" id="prize" placeholder="Например: iPhone 15">
+        <div id="contests-list"></div>
 
-    <label>Сколько победителей?</label>
-    <input type="number" id="winners" value="1" min="1">
+        <div id="empty-state" class="empty-state">
+            <i class="fas fa-ghost"></i>
+            <p>У вас пока нет активных розыгрышей.</p>
+            <p style="font-size: 14px;">Нажмите <b>Создать</b>, чтобы запустить первый!</p>
+        </div>
+    </div>
 
-    <label>ID Канала (обязательно с @)</label>
-    <div class="hint">Бот должен быть админом в этом канале</div>
-    <input type="text" id="channel" placeholder="@my_channel">
+    <!-- СТРАНИЦА 2: СОЗДАТЬ (ФОРМА) -->
+    <div id="page-create" class="page">
+        <h2>Новый конкурс</h2>
+        
+        <div class="form-section">
+            <!-- Приз -->
+            <div class="form-group">
+                <label>🎁 Что разыгрываем?</label>
+                <input type="text" id="prize" placeholder="Например: iPhone 15 Pro" oninput="validateField(this)">
+            </div>
+
+            <!-- Количество победителей -->
+            <div class="form-group">
+                <label>👥 Количество победителей</label>
+                <input type="number" id="winners" value="1" min="1" oninput="validateField(this)">
+            </div>
+
+            <!-- Каналы (Множественный выбор) -->
+            <div class="form-group">
+                <label>📢 Каналы (обязательная подписка)</label>
+                <div id="channels-container">
+                    <!-- Сюда добавляются инпуты через JS -->
+                </div>
+                <button class="add-channel-btn" onclick="addChannelInput()">
+                    <i class="fas fa-plus"></i> Добавить канал
+                </button>
+            </div>
+
+            <!-- Дата окончания -->
+            <div class="form-group">
+                <label>📅 Дата окончания</label>
+                <input type="datetime-local" id="end_time" oninput="validateField(this)">
+            </div>
+
+            <!-- Описание -->
+            <div class="form-group">
+                <label>📝 Описание (для поста)</label>
+                <textarea id="description" rows="3" placeholder="Условия: подписаться на каналы..." oninput="validateField(this)"></textarea>
+            </div>
+        </div>
+
+        <div class="note">
+            <i class="fas fa-info-circle"></i> 
+            Бот должен быть назначен <b>Администратором</b> во всех указанных каналах.
+        </div>
+    </div>
+
+    <!-- СТРАНИЦА 3: ПРОФИЛЬ -->
+    <div id="page-profile" class="page">
+        <div class="profile-header">
+            <div class="avatar-circle" id="user-avatar">?</div>
+            <h3 id="username-display" style="margin: 0; font-size: 20px;">Гость</h3>
+            <p id="userid-display" style="margin: 5px 0 0 0; color: var(--hint-color); font-size: 14px;">ID: ...</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-number" id="stat-created">0</div>
+                <div class="stat-label">Создано</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-active">0</div>
+                <div class="stat-label">Активных</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- НИЖНЕЕ МЕНЮ -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('home', this)">
+            <i class="fas fa-home"></i>
+            <span>Главная</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('create', this)">
+            <i class="fas fa-plus-circle"></i>
+            <span>Создать</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('profile', this)">
+            <i class="fas fa-user-circle"></i>
+            <span>Профиль</span>
+        </div>
+    </nav>
 
     <script>
-        // Инициализируем приложение Telegram
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Раскрыть на весь экран
+        tg.expand();
 
-        // Настраиваем Главную Кнопку (внизу экрана)
-        tg.MainButton.text = "Создать розыгрыш";
-        tg.MainButton.show();
+        // --- ЛОГИКА ДЛЯ КАНАЛОВ ---
+        function addChannelInput(value = "") {
+            const container = document.getElementById('channels-container');
+            const div = document.createElement('div');
+            div.className = 'channel-row';
+            
+            div.innerHTML = `
+                <input type="text" class="channel-input" placeholder="@channel_name" value="${value}" oninput="validateField(this)">
+                <button class="remove-btn" onclick="removeChannelInput(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            container.appendChild(div);
+        }
 
-        // Что происходит при нажатии на Главную Кнопку
+        function removeChannelInput(btn) {
+            const container = document.getElementById('channels-container');
+            // Не удаляем последнее поле, если оно единственное
+            if (container.children.length > 1) {
+                btn.parentElement.remove();
+            } else {
+                // Если единственное - просто очищаем
+                btn.parentElement.querySelector('input').value = "";
+            }
+        }
+
+        // --- ИНИЦИАЛИЗАЦИЯ ДАННЫХ ---
+        let mockContests = [];
+
+        // --- ФУНКЦИЯ ЗАГРУЗКИ ПОЛЬЗОВАТЕЛЯ ---
+        function loadUserData() {
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                document.getElementById('username-display').innerText = `${user.first_name} ${user.last_name || ''}`;
+                document.getElementById('userid-display').innerText = `ID: ${user.id}`;
+                
+                const initials = user.first_name.charAt(0).toUpperCase();
+                document.getElementById('user-avatar').innerText = initials;
+            }
+        }
+
+        // --- ФУНКЦИЯ ОТРИСОВКИ СПИСКА ---
+        function renderContests() {
+            const list = document.getElementById('contests-list');
+            const loader = document.getElementById('loader');
+            const empty = document.getElementById('empty-state');
+            
+            list.innerHTML = '';
+            empty.style.display = 'none';
+            loader.style.display = 'block';
+
+            setTimeout(() => {
+                loader.style.display = 'none';
+
+                if (mockContests.length === 0) {
+                    empty.style.display = 'block';
+                    document.getElementById('stat-created').innerText = "0";
+                    document.getElementById('stat-active').innerText = "0";
+                    return;
+                }
+            }, 300);
+        }
+
+        // --- НАВИГАЦИЯ ---
+        function switchPage(pageId, navElement) {
+            if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            document.getElementById('page-' + pageId).classList.add('active');
+            navElement.classList.add('active');
+
+            if (pageId === 'create') {
+                tg.MainButton.text = "Создать розыгрыш";
+                tg.MainButton.show();
+            } else {
+                tg.MainButton.hide();
+            }
+
+            if (pageId === 'home') {
+                renderContests();
+            }
+        }
+
+        // --- ВАЛИДАЦИЯ ФОРМЫ ---
+        function validateField(input) {
+            if (input.value.trim() !== "") {
+                input.classList.remove('error');
+            }
+        }
+
+        // --- ОТПРАВКА ДАННЫХ БОТУ ---
         tg.MainButton.onClick(function() {
-            // Собираем данные из полей
-            let prize = document.getElementById("prize").value;
-            let winners = document.getElementById("winners").value;
-            let channel = document.getElementById("channel").value;
+            if (!document.getElementById('page-create').classList.contains('active')) return;
 
-            // Простая проверка
-            if (prize === "" || channel === "") {
-                tg.showAlert("Заполните все поля!");
+            let prizeInput = document.getElementById("prize");
+            let winnersInput = document.getElementById("winners");
+            let dateInput = document.getElementById("end_time");
+            let descInput = document.getElementById("description");
+            
+            // Собираем все каналы
+            let channelInputs = document.querySelectorAll('.channel-input');
+            let channels = [];
+            let channelsValid = true;
+
+            channelInputs.forEach(input => {
+                let val = input.value.trim();
+                if (val) {
+                    channels.push(val);
+                    input.classList.remove('error');
+                } else {
+                    // Если поле пустое, помечаем ошибкой только если оно единственное или если их несколько, но все пустые
+                   // Но пока просто игнорируем пустые, если есть хотя бы один заполненный
+                }
+            });
+
+            // Проверка: нужен хотя бы один канал
+            if (channels.length === 0) {
+                channelInputs[0].classList.add('error');
+                channelsValid = false;
+            }
+
+            let prize = prizeInput.value.trim();
+            let winners = winnersInput.value.trim();
+            let endTime = dateInput.value;
+            let description = descInput.value.trim();
+
+            let isValid = true;
+
+            if (!prize) { prizeInput.classList.add('error'); isValid = false; }
+            if (!winners) { winnersInput.classList.add('error'); isValid = false; }
+            if (!channelsValid) { isValid = false; } // Каналы уже подсвечены выше
+            if (!endTime) { dateInput.classList.add('error'); isValid = false; }
+            if (!description) { descInput.classList.add('error'); isValid = false; }
+
+            if (!isValid) {
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert("Пожалуйста, заполните все поля и добавьте хотя бы один канал!");
                 return;
             }
 
-            // Формируем данные для отправки боту
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+            // Формируем ПОЛНЫЙ пакет данных для бота
             let data = {
+                action: "create_contest",
                 prize: prize,
                 winners: winners,
-                channel: channel,
-                action: "create_contest" // Метка, чтобы бот понял, что делать
+                channels: channels, // Теперь это МАССИВ (список)
+                end_time: endTime,
+                description: description
             };
 
-            // Отправляем данные боту (как сообщение, но скрыто)
+            // Отправляем данные. Окно Mini App закроется, и данные придут боту в чат.
             tg.sendData(JSON.stringify(data));
         });
+
+        // --- ЗАПУСК ---
+        tg.MainButton.color = tg.themeParams.button_color || "#2481cc";
+        tg.MainButton.textColor = tg.themeParams.button_text_color || "#ffffff";
+        
+        // Добавляем первое поле для канала при старте
+        addChannelInput();
+        
+        loadUserData();
+        renderContests();
+
     </script>
 </body>
 </html>
