@@ -41,3 +41,20 @@ def add_user(telegram_id, username, referrer_id=None):
         return False # Уже был в базе
     finally:
         connection.close()
+
+# --- ДОБАВИТЬ В КОНЕЦ database.py ---
+
+def mark_contest_inactive(contest_id):
+    connection = sqlite3.connect(DB_NAME)
+    cursor = connection.cursor()
+    cursor.execute("UPDATE contests SET is_active = 0 WHERE id = ?", (contest_id,))
+    connection.commit()
+    connection.close()
+
+def get_participants(contest_id):
+    connection = sqlite3.connect(DB_NAME)
+    cursor = connection.cursor()
+    cursor.execute("SELECT user_id, user_name FROM participants WHERE contest_id = ?", (contest_id,))
+    participants = cursor.fetchall()
+    connection.close()
+    return participants
